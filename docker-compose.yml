@@ -1,0 +1,44 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: clinic_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: clinic_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - clinic_network
+  redis:
+    image: redis:alpine
+    container_name: clinic_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - clinic_network
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clinic_backend
+    hostname: backend
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - clinic_network
+    depends_on:
+      - mysql
+      - redis
+volumes:
+  mysql_data:
+networks:
+  clinic_network:

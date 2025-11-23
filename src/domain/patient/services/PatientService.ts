@@ -1,0 +1,50 @@
+import { v4 as uuidv4 } from 'uuid';
+import { IPatientRepository } from '../repositories/IPatientRepository';
+import { CreatePatientDTO, UpdatePatientDTO } from '../dtos/PatientDTO';
+import { Patient } from '../entities/Patient';
+import { EventPublisher } from '../../../infrastructure/messaging/EventPublisher';
+
+export class PatientService {
+    constructor(private patientRepository: IPatientRepository) { }
+
+    async createPatient(dto: CreatePatientDTO): Promise<Patient> {
+        const patient = new Patient(
+            uuidv4(),
+            dto.firstName,
+            dto.lastName,
+            dto.birthDate,
+            dto.gender,
+            dto.status
+        );
+
+        await this.patientRepository.create(patient);
+        await EventPublisher.getInstance().publish('PatientCreated', patient);
+
+        return patient;
+    }
+
+    async updatePatient(id: string, dto: UpdatePatientDTO): Promise<Patient | null> {
+        const patient = await this.patientRepository.findById(id);
+        if (!patient) return null;
+
+        if (dto.firstName) patient.firstName = dto.firstName;
+        if (dto.lastName) patient.lastName = dto.lastName;
+        if (dto.birthDate) patient.birthDate = dto.birthDate;
+        if (dto.gender) patient.gender = dto.gender;
+        if (dto.status) patient.status = dto.status;
+
+        await this.patientRepository.update(patient);
+        await EventPublisher.getInstance().publish('PatientUpdated', patient);
+
+        return patient;
+    }
+
+    async getPatientById(id: string): Promise<Patient | null> {
+        return this.patientRepository.findById(id);
+    }
+
+    async disablePatient(id: string): Promise<void> {
+        await this.patientRepository.delete(id);
+        // Optionally publish an event for deletion/disabling
+    }
+}
