@@ -6,7 +6,7 @@ services:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: clinic_db
       MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_PASSWORD: SecretDBpassword123
     ports:
       - "3307:3306"
     volumes:
@@ -38,7 +38,22 @@ services:
     depends_on:
       - mysql
       - redis
+  drizzle-gateway:
+    image: ghcr.io/drizzle-team/gateway:latest
+    container_name: drizzle_gate
+    restart: always
+    environment:
+      PORT: ${DRIZZLE_GATEWAY_PORT:-4983}
+      STORE_PATH: ${DRIZZLE_GATEWAY_STORE_PATH:-/app}
+      MASTERPASS: ${DRIZZLE_GATEWAY_MASTERPASS:-change_me}
+    ports:
+      - "${DRIZZLE_GATEWAY_PORT:-4983}:4983"
+    volumes:
+      - drizzle-gateway:/app
+    networks:
+      - clinic_network
 volumes:
   mysql_data:
+  drizzle-gateway:
 networks:
   clinic_network:

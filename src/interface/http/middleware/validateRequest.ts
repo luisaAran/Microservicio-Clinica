@@ -1,7 +1,7 @@
 import type { Request, RequestHandler } from 'express';
 import type { ZodTypeAny } from 'zod';
 import { ZodError } from 'zod';
-import { ApiError } from '../../../utils/ApiError.js';
+import { ValidationRequestError } from '../../../domain/shared/errors/index.js';
 
 export type ValidatedPayload<
     Body = unknown,
@@ -48,7 +48,7 @@ export const validateRequest = (schemas: ValidationSchemas): RequestHandler => {
                 return next(error);
             }
 
-            return next(new ApiError(400, 'Invalid request data'));
+            return next(new ValidationRequestError('Invalid request data'));
         }
     };
 };

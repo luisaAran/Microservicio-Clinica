@@ -5,6 +5,7 @@ import { TumorTypeRepository } from '../../../domain/tumor-type/repositories/Tum
 import { CreateTumorTypeSchema, UpdateTumorTypeSchema } from '../../../domain/tumor-type/dtos/TumorTypeDTO.js';
 import { TumorTypeIdParamSchema } from '../../../domain/shared/paramSchemas.js';
 import { validateRequest } from '../middleware/validateRequest.js';
+import { TumorTypeListQuerySchema } from '../../../domain/shared/querySchemas.js';
 
 const router:Router = Router();
 const repository = new TumorTypeRepository();
@@ -29,7 +30,7 @@ const controller = new TumorTypeController(service);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/TumorType'
+ *               $ref: '#/components/schemas/TumorTypeResponse'
  */
 router.post('/', validateRequest({ body: CreateTumorTypeSchema }), controller.create);
 
@@ -37,19 +38,68 @@ router.post('/', validateRequest({ body: CreateTumorTypeSchema }), controller.cr
  * @swagger
  * /tumor-types:
  *   get:
- *     summary: List all tumor types
+ *     summary: List tumor types with optional filters
  *     tags: [TumorTypes]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           minimum: 1
+ *         description: Numero de pagina (1-indexado)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Cantidad de registros por pagina
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Filtra por nombre de tumor
+ *       - in: query
+ *         name: systemAffected
+ *         schema:
+ *           type: string
+ *         description: Filtra por sistema afectado
  *     responses:
  *       200:
- *         description: The list of tumor types
+ *         description: Lista paginada de tipos de tumor
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/TumorType'
+ *               $ref: '#/components/schemas/PaginatedTumorTypes'
  */
-router.get('/', controller.list);
+router.get('/', validateRequest({ query: TumorTypeListQuerySchema }), controller.list);
+
+/**
+ * @swagger
+ * /tumor-types/{id}:
+ *   get:
+ *     summary: Get tumor type by id
+ *     tags: [TumorTypes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Tumor type ID
+ *     responses:
+ *       200:
+ *         description: Tumor type found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TumorTypeResponse'
+ *       404:
+ *         description: The tumor type was not found
+ */
+router.get('/:id', validateRequest({ params: TumorTypeIdParamSchema }), controller.getById);
 
 /**
  * @swagger
@@ -76,7 +126,7 @@ router.get('/', controller.list);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/TumorType'
+ *               $ref: '#/components/schemas/TumorTypeResponse'
  *       404:
  *         description: The tumor type was not found
  */
@@ -86,4 +136,30 @@ router.put(
 	controller.update
 );
 
+/**
+ * @swagger
+ * /tumor-types/{id}:
+ *   delete:
+ *     summary: Soft delete a tumor type
+ *     tags: [TumorTypes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The tumor type ID
+ *     responses:
+ *       200:
+ *         description: The tumor type was successfully deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *       404:
+ *         description: The tumor type was not found
+ */
+router.delete('/:id', validateRequest({ params: TumorTypeIdParamSchema }), controller.delete);
+
+export const tumorTypeRoutes = router;
 export default router;

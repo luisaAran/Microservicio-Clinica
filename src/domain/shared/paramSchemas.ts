@@ -11,3 +11,9 @@ export const TumorTypeIdParamSchema = z.object({
 }).transform(({ id }) => ({ tumorTypeId: id }));
 
 export type TumorTypeIdParams = z.infer<typeof TumorTypeIdParamSchema>;
+
+export const ClinicalRecordIdParamSchema = z.object({
+    id: z.string().uuid('El identificador de la historia clínica debe ser un UUID válido'),
+}).transform(({ id }) => ({ clinicalRecordId: id }));
+
+export type ClinicalRecordIdParams = z.infer<typeof ClinicalRecordIdParamSchema>;

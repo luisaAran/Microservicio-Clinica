@@ -1,11 +1,12 @@
 import app from './app';
 import dotenv from 'dotenv';
+import { logger } from './utils/logger.js';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Documentation available at http://localhost:${PORT}/docs`);
+    logger.info({ port: PORT }, 'Server running');
+    logger.info({ url: `http://localhost:${PORT}/docs` }, 'API docs available');
 });

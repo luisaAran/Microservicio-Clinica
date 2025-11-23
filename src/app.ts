@@ -6,10 +6,14 @@ import { patientRoutes } from './interface/http/routes/patientRoutes.js';
 import { tumorTypeRoutes } from './interface/http/routes/tumorTypeRoutes.js';
 import { clinicalRecordRoutes } from './interface/http/routes/clinicalRecordRoutes.js';
 import { errorHandler } from './interface/http/middleware/errorHandler.js';
+import { requestLogger } from './interface/http/middleware/requestLogger.js';
+import { corsMiddleware } from './interface/http/middleware/corsMiddleware.js';
 
 const app: Application = express();
 
 app.use(express.json());
+app.use(corsMiddleware);
+app.use(requestLogger);
 
 // Docs
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));

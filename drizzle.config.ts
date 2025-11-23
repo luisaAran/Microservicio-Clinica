@@ -1,9 +1,8 @@
 import { defineConfig } from 'drizzle-kit';
-import type { Config } from 'drizzle-kit';
 import 'dotenv/config'
-const database_url = `mysql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
+const database_url = `mysql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
 export default defineConfig({
-  schema: './src/db/schema/index.ts',
+  schema: './src/infrastructure/database/drizzle/schema.ts',
   out: './drizzle',
   dialect: 'mysql',
   dbCredentials: {

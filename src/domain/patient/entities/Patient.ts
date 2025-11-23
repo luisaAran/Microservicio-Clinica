@@ -1,10 +1,12 @@
+import type { PatientGender, PatientStatus } from '../dtos/PatientDTO.js';
+
 export class Patient {
     constructor(
         public readonly id: string,
         public firstName: string,
         public lastName: string,
         public birthDate: Date,
-        public gender: string,
-        public status: 'Activo' | 'Seguimiento' | 'Inactivo'
+        public gender: PatientGender,
+        public status: PatientStatus
     ) { }
 }

@@ -5,11 +5,61 @@ import { PatientRepository } from '../../../domain/patient/repositories/PatientR
 import { CreatePatientSchema, UpdatePatientSchema } from '../../../domain/patient/dtos/PatientDTO.js';
 import { PatientIdParamSchema } from '../../../domain/shared/paramSchemas.js';
 import { validateRequest } from '../middleware/validateRequest.js';
+import { PatientListQuerySchema } from '../../../domain/shared/querySchemas.js';
 
 const router:Router = Router();
 const repository = new PatientRepository();
 const service = new PatientService(repository);
 const controller = new PatientController(service);
+
+/**
+ * @swagger
+ * /patients:
+ *   get:
+ *     summary: List all patients. By default, it only returns the active and monitoring patients.
+ *     tags: [Patients]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Número de página (1-indexado)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Cantidad de registros por página
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Filtra por coincidencia en nombres o apellidos
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [Activo, Seguimiento, Inactivo]
+ *         description: Filtra por estado clínico (por defecto se incluyen solo pacientes Activo y Seguimiento)
+ *       - in: query
+ *         name: gender
+ *         schema:
+ *           type: string
+ *           enum: [MASCULINO, FEMENINO, OTRO, NO_ESPECIFICADO]
+ *         description: Filtra por género
+ *     responses:
+ *       200:
+ *         description: Lista paginada de pacientes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PaginatedPatients'
+ */
+router.get('/', validateRequest({ query: PatientListQuerySchema }), controller.list);
 
 /**
  * @swagger
@@ -29,7 +79,7 @@ const controller = new PatientController(service);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Patient'
+ *               $ref: '#/components/schemas/PatientResponse'
  */
 router.post('/', validateRequest({ body: CreatePatientSchema }), controller.create);
 
@@ -52,7 +102,7 @@ router.post('/', validateRequest({ body: CreatePatientSchema }), controller.crea
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Patient'
+ *               $ref: '#/components/schemas/PatientResponse'
  *       404:
  *         description: The patient was not found
  */
@@ -83,7 +133,7 @@ router.get('/:id', validateRequest({ params: PatientIdParamSchema }), controller
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Patient'
+ *               $ref: '#/components/schemas/PatientResponse'
  *       404:
  *         description: The patient was not found
  */
@@ -107,11 +157,18 @@ router.put(
  *         required: true
  *         description: The patient ID
  *     responses:
- *       204:
+ *       200:
  *         description: The patient was successfully disabled
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: The patient was not found
+ *       400:
+ *         description: Patient already disabled
  */
 router.delete('/:id', validateRequest({ params: PatientIdParamSchema }), controller.delete);
 
+export const patientRoutes = router;
 export default router;
