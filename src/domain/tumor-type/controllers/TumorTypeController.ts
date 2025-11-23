@@ -29,7 +29,7 @@ export class TumorTypeController {
         }
         res.json(tumorType);
     });
-    list = asyncHandler(async (req: Request, res: Response) => {
+    list = asyncHandler(async (_req: Request, res: Response) => {
         const tumorTypes = await this.tumorTypeService.listTumorTypes();
         res.json(tumorTypes);
     });

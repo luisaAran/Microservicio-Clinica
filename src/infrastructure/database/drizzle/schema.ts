@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, timestamp, text, int, boolean } from 'drizzle-orm/mysql-core';
+import { mysqlTable, varchar, timestamp, text, int} from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 
 export const patients = mysqlTable('patients', {
