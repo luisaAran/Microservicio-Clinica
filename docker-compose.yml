@@ -3,10 +3,12 @@ services:
     image: mysql:8.0
     container_name: clinic_mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: clinic_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: SecretDBpassword123
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-genosentinel_pass}
+      MYSQL_DATABASE: ${DB_NAME:-genosentinel_db}
+      MYSQL_USER: ${DB_USER:-genosentinel_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-genosentinel_pass}
+    env_file:
+      - .env
     ports:
       - "3307:3306"
     volumes:
