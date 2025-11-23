@@ -1,16 +1,23 @@
 import { v4 as uuidv4 } from 'uuid';
 import {
-    type ClinicalRecordByPatientFilters,
-    type ClinicalRecordListFilters,
-    IClinicalRecordRepository,
+	type ClinicalRecordByPatientFilters,
+	type ClinicalRecordListFilters,
+	IClinicalRecordRepository,
 } from '../repositories/IClinicalRecordRepository.js';
-import { CreateClinicalRecordDTO, UpdateClinicalRecordDTO } from '../dtos/ClinicalRecordDTO';
-import { ClinicalRecord } from '../entities/ClinicalRecord';
+import { CreateClinicalRecordDTO, UpdateClinicalRecordDTO } from '../dtos/ClinicalRecordDTO.js';
+import { ClinicalRecord } from '../entities/ClinicalRecord.js';
 import { EventPublisher } from '../../../infrastructure/messaging/EventPublisher.js';
 import { PatientService } from '../../patient/services/PatientService.js';
 import { TumorTypeService } from '../../tumor-type/services/TumorTypeService.js';
 import { ClinicalRecordAlreadyDeletedError, ClinicalRecordNotFoundError } from '../errors/ClinicalRecordErrors.js';
 import type { PaginatedResult } from '../../shared/pagination.js';
+import { PatientInactiveError } from '../../patient/errors/PatientErrors.js';
+import { cacheUtils } from '../../../utils/redisClient.js';
+import { logger } from '../../../utils/logger.js';
+
+const CLINICAL_RECORD_LIST_CACHE_PREFIX = 'cache:clinical-records:list';
+const CLINICAL_RECORD_DETAIL_CACHE_PREFIX = 'cache:clinical-records:detail';
+const CLINICAL_RECORD_PATIENT_CACHE_PREFIX = 'cache:clinical-records:patient';
 
 export class ClinicalRecordService {
     constructor(
@@ -20,10 +27,13 @@ export class ClinicalRecordService {
     ) { }
 
     async createClinicalRecord(dto: CreateClinicalRecordDTO): Promise<ClinicalRecord> {
-        await Promise.all([
+        const [patient] = await Promise.all([
             this.patientService.getPatientById(dto.patientId),
             this.tumorTypeService.getTumorTypeById(dto.tumorTypeId),
         ]);
+        if (patient.status === 'Inactivo') {
+            throw new PatientInactiveError(dto.patientId);
+        }
         const record = new ClinicalRecord(
             uuidv4(),
             dto.patientId,
@@ -33,6 +43,7 @@ export class ClinicalRecordService {
             dto.treatmentProtocol
         );
         await this.clinicalRecordRepository.create(record);
+        await this.invalidateCache(record.id, [record.patientId]);
         await EventPublisher.getInstance().publish('ClinicalRecordCreated', record);
         return record;
     }
@@ -58,7 +69,14 @@ export class ClinicalRecordService {
         const nextTumorTypeId = dto.tumorTypeId ?? existingRecord.tumorTypeId;
         const referenceValidations: Promise<unknown>[] = [];
         if (dto.patientId) {
-            referenceValidations.push(this.patientService.getPatientById(nextPatientId));
+            referenceValidations.push(
+                (async () => {
+                    const patient = await this.patientService.getPatientById(nextPatientId);
+                    if (patient.status === 'Inactivo') {
+                        throw new PatientInactiveError(nextPatientId);
+                    }
+                })()
+            );
         }
         if (dto.tumorTypeId) {
             referenceValidations.push(this.tumorTypeService.getTumorTypeById(nextTumorTypeId));
@@ -75,6 +93,8 @@ export class ClinicalRecordService {
             dto.treatmentProtocol ?? existingRecord.treatmentProtocol
         );
         await this.clinicalRecordRepository.update(updatedRecord);
+        const patientIds = new Set<string>([existingRecord.patientId, updatedRecord.patientId]);
+        await this.invalidateCache(updatedRecord.id, Array.from(patientIds));
         await EventPublisher.getInstance().publish('ClinicalRecordUpdated', updatedRecord);
         return updatedRecord;
     }
@@ -87,6 +107,27 @@ export class ClinicalRecordService {
             throw new ClinicalRecordAlreadyDeletedError(id);
         }
         await this.clinicalRecordRepository.delete(recordStatus.record.id);
+        await this.invalidateCache(recordStatus.record.id, [recordStatus.record.patientId]);
         await EventPublisher.getInstance().publish('ClinicalRecordDeleted', { id: recordStatus.record.id });
+    }
+
+    private async invalidateCache(recordId?: string, patientIds: string[] = []): Promise<void> {
+        try {
+            await cacheUtils.deleteByPrefix(CLINICAL_RECORD_LIST_CACHE_PREFIX);
+            if (recordId) {
+                await cacheUtils.del(`${CLINICAL_RECORD_DETAIL_CACHE_PREFIX}:${recordId}`);
+            }
+
+            if (patientIds.length) {
+                const uniquePatientIds = [...new Set(patientIds)];
+                await Promise.all(
+			uniquePatientIds.map((patientId) =>
+				cacheUtils.deleteByPrefix(`${CLINICAL_RECORD_PATIENT_CACHE_PREFIX}:${patientId}`)
+			)
+		);
+            }
+        } catch (err) {
+            logger.error({ err }, 'Failed to invalidate clinical record cache');
+        }
     }
 }

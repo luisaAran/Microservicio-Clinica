@@ -6,6 +6,11 @@ import { EventPublisher } from '../../../infrastructure/messaging/EventPublisher
 import { PatientAlreadyDeletedError as PatientAlreadyDisabledError, PatientNotFoundError } from '../errors/PatientErrors.js';
 import type { PaginatedResult } from '../../shared/pagination.js';
 import type { PatientListFilters } from '../repositories/IPatientRepository.js';
+import { cacheUtils } from '../../../utils/redisClient.js';
+import { logger } from '../../../utils/logger.js';
+
+const PATIENT_LIST_CACHE_PREFIX = 'cache:patients:list';
+const PATIENT_DETAIL_CACHE_PREFIX = 'cache:patients:detail';
 
 export class PatientService {
     constructor(private patientRepository: IPatientRepository) { }
@@ -19,6 +24,7 @@ export class PatientService {
             'Activo'
         );
         await this.patientRepository.create(patient);
+        await this.invalidatePatientCache(patient.id);
         await EventPublisher.getInstance().publish('PatientCreated', patient);
         return patient;
     }
@@ -30,6 +36,7 @@ export class PatientService {
         if (dto.gender) patient.gender = dto.gender;
         if (dto.status) patient.status = dto.status;
         await this.patientRepository.update(patient);
+        await this.invalidatePatientCache(patient.id);
         await EventPublisher.getInstance().publish('PatientUpdated', patient);
         return patient;
     }
@@ -49,5 +56,17 @@ export class PatientService {
         const patientToDelte = await this.getPatientById(id);
         if(patientToDelte.status === "Inactivo") throw new PatientAlreadyDisabledError(id);
         await this.patientRepository.delete(id);
+        await this.invalidatePatientCache(id);
+    }
+
+    private async invalidatePatientCache(patientId?: string): Promise<void> {
+        try {
+            await cacheUtils.deleteByPrefix(PATIENT_LIST_CACHE_PREFIX);
+            if (patientId) {
+                await cacheUtils.del(`${PATIENT_DETAIL_CACHE_PREFIX}:${patientId}`);
+            }
+        } catch (err) {
+            logger.error({ err }, 'Failed to invalidate patient cache');
+        }
     }
 }

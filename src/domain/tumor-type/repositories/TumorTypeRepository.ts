@@ -36,7 +36,6 @@ export class TumorTypeRepository implements ITumorTypeRepository {
         const row = result[0];
         return row ? mapRowToEntity(row) : null;
     }
-
     async findByIdIncludingDeleted(id: number): Promise<{ tumorType: TumorType; isDeleted: boolean } | null> {
         const result = await db.select().from(tumorTypes).where(eq(tumorTypes.id, id)).limit(1);
         const row = result[0];

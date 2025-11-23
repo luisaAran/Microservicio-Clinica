@@ -13,9 +13,16 @@ import { PatientRepository } from '../../../domain/patient/repositories/PatientR
 import { TumorTypeRepository } from '../../../domain/tumor-type/repositories/TumorTypeRepository.js';
 import { PatientService } from '../../../domain/patient/services/PatientService.js';
 import { TumorTypeService } from '../../../domain/tumor-type/services/TumorTypeService.js';
+import { cacheMiddleware } from '../../../utils/cacheMiddleware.js';
+import { buildDetailCacheKey, buildListCacheKey } from '../../../utils/cacheKeyBuilder.js';
+import type { PaginatedResponse, SuccessResponse } from '../responses/apiResponse.js';
+import type { ClinicalRecord } from '../../../domain/clinical-record/entities/ClinicalRecord.js';
 
-const router:Router = Router();
+const router: Router = Router();
 const repository = new ClinicalRecordRepository();
+const CLINICAL_RECORD_LIST_CACHE_PREFIX = 'clinical-records:list';
+const CLINICAL_RECORD_DETAIL_CACHE_PREFIX = 'clinical-records:detail';
+const CLINICAL_RECORD_PATIENT_LIST_CACHE_PREFIX = 'clinical-records:patient';
 const patientRepository = new PatientRepository();
 const tumorTypeRepository = new TumorTypeRepository();
 const patientService = new PatientService(patientRepository);
@@ -84,6 +91,9 @@ const controller = new ClinicalRecordController(service);
 router.get(
 	'/clinical-records',
 	validateRequest({ query: ClinicalRecordListQuerySchema }),
+	cacheMiddleware<PaginatedResponse<ClinicalRecord>>(600, {
+		keyBuilder: (req) => buildListCacheKey(CLINICAL_RECORD_LIST_CACHE_PREFIX, req.query),
+	}),
 	controller.list
 );
 
@@ -135,6 +145,9 @@ router.post('/clinical-records', validateRequest({ body: CreateClinicalRecordSch
 router.get(
 	'/clinical-records/:id',
 	validateRequest({ params: ClinicalRecordIdParamSchema }),
+	cacheMiddleware<SuccessResponse<ClinicalRecord>>(3600, {
+		keyBuilder: (req) => buildDetailCacheKey(CLINICAL_RECORD_DETAIL_CACHE_PREFIX, req.params.id),
+	}),
 	controller.getById
 );
 
@@ -195,6 +208,10 @@ router.get(
 router.get(
 	'/patients/:id/clinical-records',
 	validateRequest({ params: PatientIdParamSchema, query: ClinicalRecordByPatientQuerySchema }),
+	cacheMiddleware<PaginatedResponse<ClinicalRecord>>(600, {
+		keyBuilder: (req) =>
+			buildListCacheKey(`${CLINICAL_RECORD_PATIENT_LIST_CACHE_PREFIX}:${req.params.id}`, req.query),
+	}),
 	controller.listByPatient
 );
 

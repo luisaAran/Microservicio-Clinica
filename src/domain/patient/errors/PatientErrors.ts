@@ -10,13 +10,25 @@ export class PatientNotFoundError extends ApiError<{ patientId: string }> {
         });
     }
 }
-export class PatientAlreadyDeletedError extends ApiError<{patientId: string}>{
-    constructor(patientId:string){
+
+export class PatientAlreadyDeletedError extends ApiError<{ patientId: string }> {
+    constructor(patientId: string) {
         super({
             statusCode: 400,
             code: ErrorCode.BAD_REQUEST,
             message: `Patient ${patientId} already deleted`,
-            details: {patientId}
-        })
+            details: { patientId },
+        });
+    }
+}
+
+export class PatientInactiveError extends ApiError<{ patientId: string }> {
+    constructor(patientId: string) {
+        super({
+            statusCode: 400,
+            code: ErrorCode.BAD_REQUEST,
+            message: `Patient ${patientId} is inactive`,
+            details: { patientId },
+        });
     }
 }

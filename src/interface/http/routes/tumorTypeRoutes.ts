@@ -6,8 +6,15 @@ import { CreateTumorTypeSchema, UpdateTumorTypeSchema } from '../../../domain/tu
 import { TumorTypeIdParamSchema } from '../../../domain/shared/paramSchemas.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { TumorTypeListQuerySchema } from '../../../domain/shared/querySchemas.js';
+import { cacheMiddleware } from '../../../utils/cacheMiddleware.js';
+import { buildDetailCacheKey, buildListCacheKey } from '../../../utils/cacheKeyBuilder.js';
+import type { PaginatedResponse, SuccessResponse } from '../responses/apiResponse.js';
+import type { TumorType } from '../../../domain/tumor-type/entities/TumorType.js';
 
-const router:Router = Router();
+const TUMOR_TYPE_LIST_CACHE_PREFIX = 'tumor-types:list';
+const TUMOR_TYPE_DETAIL_CACHE_PREFIX = 'tumor-types:detail';
+
+const router: Router = Router();
 const repository = new TumorTypeRepository();
 const service = new TumorTypeService(repository);
 const controller = new TumorTypeController(service);
@@ -74,7 +81,14 @@ router.post('/', validateRequest({ body: CreateTumorTypeSchema }), controller.cr
  *             schema:
  *               $ref: '#/components/schemas/PaginatedTumorTypes'
  */
-router.get('/', validateRequest({ query: TumorTypeListQuerySchema }), controller.list);
+router.get(
+	'/',
+	validateRequest({ query: TumorTypeListQuerySchema }),
+	cacheMiddleware<PaginatedResponse<TumorType>>(600, {
+		keyBuilder: (req) => buildListCacheKey(TUMOR_TYPE_LIST_CACHE_PREFIX, req.query),
+	}),
+	controller.list
+);
 
 /**
  * @swagger
@@ -99,7 +113,14 @@ router.get('/', validateRequest({ query: TumorTypeListQuerySchema }), controller
  *       404:
  *         description: The tumor type was not found
  */
-router.get('/:id', validateRequest({ params: TumorTypeIdParamSchema }), controller.getById);
+router.get(
+	'/:id',
+	validateRequest({ params: TumorTypeIdParamSchema }),
+	cacheMiddleware<SuccessResponse<TumorType>>(3600, {
+		keyBuilder: (req) => buildDetailCacheKey(TUMOR_TYPE_DETAIL_CACHE_PREFIX, req.params.id),
+	}),
+	controller.getById
+);
 
 /**
  * @swagger

@@ -6,8 +6,15 @@ import { CreatePatientSchema, UpdatePatientSchema } from '../../../domain/patien
 import { PatientIdParamSchema } from '../../../domain/shared/paramSchemas.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { PatientListQuerySchema } from '../../../domain/shared/querySchemas.js';
+import { cacheMiddleware } from '../../../utils/cacheMiddleware.js';
+import { buildDetailCacheKey, buildListCacheKey } from '../../../utils/cacheKeyBuilder.js';
+import type { PaginatedResponse, SuccessResponse } from '../responses/apiResponse.js';
+import type { Patient } from '../../../domain/patient/entities/Patient.js';
 
-const router:Router = Router();
+const PATIENT_LIST_CACHE_PREFIX = 'patients:list';
+const PATIENT_DETAIL_CACHE_PREFIX = 'patients:detail';
+
+const router: Router = Router();
 const repository = new PatientRepository();
 const service = new PatientService(repository);
 const controller = new PatientController(service);
@@ -59,7 +66,14 @@ const controller = new PatientController(service);
  *             schema:
  *               $ref: '#/components/schemas/PaginatedPatients'
  */
-router.get('/', validateRequest({ query: PatientListQuerySchema }), controller.list);
+router.get(
+	'/',
+	validateRequest({ query: PatientListQuerySchema }),
+	cacheMiddleware<PaginatedResponse<Patient>>(600, {
+		keyBuilder: (req) => buildListCacheKey(PATIENT_LIST_CACHE_PREFIX, req.query),
+	}),
+	controller.list
+);
 
 /**
  * @swagger
@@ -106,7 +120,14 @@ router.post('/', validateRequest({ body: CreatePatientSchema }), controller.crea
  *       404:
  *         description: The patient was not found
  */
-router.get('/:id', validateRequest({ params: PatientIdParamSchema }), controller.getById);
+router.get(
+	'/:id',
+	validateRequest({ params: PatientIdParamSchema }),
+	cacheMiddleware<SuccessResponse<Patient>>(3600, {
+		keyBuilder: (req) => buildDetailCacheKey(PATIENT_DETAIL_CACHE_PREFIX, req.params.id),
+	}),
+	controller.getById
+);
 
 /**
  * @swagger
