@@ -1,5 +1,8 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 
+const DEFAULT_PORT = process.env.PORT || '8001';
+const swaggerServerUrl = process.env.SWAGGER_SERVER_URL || `http://localhost:${DEFAULT_PORT}`;
+
 const options = {
     definition: {
         openapi: '3.0.0',
@@ -10,7 +13,7 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:3000',
+                url: swaggerServerUrl,
             },
         ],
         components: {

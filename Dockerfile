@@ -10,6 +10,6 @@ COPY tsconfig.json ./
 COPY drizzle.config.ts ./
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
-EXPOSE 3000
+EXPOSE 8001
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["pnpm", "run", "dev"]
